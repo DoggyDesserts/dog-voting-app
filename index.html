@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dog Voting Live</title>
+  <title>Dog Voting App</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
@@ -142,7 +142,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: centre;
+      justify-content: center;
       border-radius: 16px;
       opacity: 0;
       pointer-events: none;
@@ -190,8 +190,7 @@
   <div id="container" class="loading">Loading adorable dogs...</div>
 
   <script>
-    const sheetURL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://docs.google.com/spreadsheets/d/1lgqJYchO0HGPwOxnKZbjkZfwxOran0JHC1gM93itvZI/gviz/tq?tqx=out:json');
-    const voteURL = 'https://script.google.com/macros/s/AKfycbzCJCx5X8NbpwFCQMqyhiaMK2eLSiFa1Dn1rpfH73NcDubbX4NCgv6-IduBzmP4iQ8B/exec';
+    const sheetURL = 'https://script.google.com/macros/s/AKfycbzQIpcnl-9oaz_n-_DVDCmrcw7UJaG9HWGM4dlLVaSR-i5GJ0OKSTVJM-YsDJc-ahM7/exec';
 
     document.addEventListener('DOMContentLoaded', loadDogs);
 
@@ -200,13 +199,9 @@
 
       try {
         const response = await fetch(sheetURL);
-        if (!response.ok) throw new Error('Network response was not ok');
+        const dogs = await response.json();
 
-        const text = await response.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = json.table.rows.slice(1);
-
-        if (rows.length === 0) {
+        if (dogs.length === 0) {
           container.innerHTML = '<div class="error">No dogs available for voting at the moment.</div>';
           return;
         }
@@ -214,32 +209,25 @@
         container.innerHTML = '';
         container.classList.remove('loading');
 
-        rows.forEach(row => {
-          const name = row.c[0]?.v;
-          const img = row.c[1]?.v;
-          const votes = row.c[2]?.v || 0;
-          const open = row.c[3]?.v;
-
-          if (!name || !img || open !== true) return;
-
-          const id = `dog-${name.replace(/\s+/g, '')}`;
-          const voted = localStorage.getItem(id);
+        dogs.forEach(dog => {
+          const { Name, Image, Votes = 0 } = dog;
+          const voted = localStorage.getItem(`dog-${Name}`);
 
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
             <div class="image-wrapper">
-              <img src="${img}" alt="${name}" class="dog-img" loading="lazy" />
+              <img src="${Image}" alt="${Name}" class="dog-img" loading="lazy" />
             </div>
-            <div class="dog-name">${name}</div>
-            <div class="vote-count">${votes} ${votes === 1 ? 'vote' : 'votes'}</div>
-            <button class="vote-btn ${voted ? 'voted' : ''}" data-name="${name}" data-votes="${votes}">
+            <div class="dog-name">${Name}</div>
+            <div class="vote-count">${Votes} ${Votes === 1 ? 'vote' : 'votes'}</div>
+            <button class="vote-btn ${voted ? 'voted' : ''}" data-name="${Name}" data-votes="${Votes}">
               <span class="heart ${voted ? 'voted' : ''}"><i class="fa-solid fa-heart"></i></span>
               <span class="votes">${voted ? 'Voted!' : 'Vote'}</span>
             </button>
             <div class="thank-you-message ${voted ? 'show' : ''}">
               <h3>Thank You!</h3>
-              <p>Your vote for ${name} has been counted</p>
+              <p>Your vote for ${Name} has been counted</p>
             </div>
           `;
           container.appendChild(card);
@@ -256,7 +244,7 @@
       document.querySelectorAll('.vote-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const name = btn.dataset.name;
-          const id = `dog-${name.replace(/\s+/g, '')}`;
+          const id = `dog-${name}`;
           const card = btn.closest('.card');
 
           if (localStorage.getItem(id)) {
@@ -284,22 +272,18 @@
 
           const thankYouMessage = card.querySelector('.thank-you-message');
           thankYouMessage.classList.add('show');
-
-          setTimeout(() => {
-            thankYouMessage.classList.remove('show');
-          }, 3000);
+          setTimeout(() => thankYouMessage.classList.remove('show'), 3000);
 
           localStorage.setItem(id, 'true');
 
           try {
-            const res = await fetch(voteURL, {
+            await fetch(sheetURL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `name=${encodeURIComponent(name)}`
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name })
             });
-            if (!res.ok) console.error('Vote submitted but with issue.');
           } catch (err) {
-            console.error('Error submitting vote:', err);
+            console.error('Vote submission error:', err);
           }
         });
       });
