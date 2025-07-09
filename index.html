@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dog Voting Live</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+      padding: 2rem 1.5rem;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 2rem;
+    }
+
+    #container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+      padding: 1.5rem;
+      text-align: center;
+      width: 300px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+
+    .image-wrapper {
+      width: 100%;
+      padding-top: 100%;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .dog-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .dog-name {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin: 1.2rem 0 0.8rem;
+      color: #333;
+    }
+
+    .vote-btn {
+      cursor: pointer;
+      border: none;
+      background: #f0f0f0;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 0.8rem auto 0;
+      padding: 0.6rem 1.2rem;
+      border-radius: 50px;
+      transition: all 0.3s ease;
+    }
+
+    .vote-btn:hover:not(.voted) {
+      background: #e8e8e8;
+    }
+
+    .vote-btn.voted {
+      background: #ffebee;
+      cursor: default;
+    }
+
+    .heart {
+      color: #ccc;
+      font-size: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .heart.voted {
+      color: #ff4757;
+      animation: pulse 0.5s ease-in-out;
+    }
+
+    .votes {
+      font-weight: 600;
+      color: #555;
+    }
+
+    .vote-count {
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 1.2rem;
+      color: #555;
+      padding: 2rem;
+      width: 100%;
+    }
+
+    .error {
+      background: #ffe9e9;
+      color: #d63031;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+      width: 100%;
+      max-width: 500px;
+      margin: 2rem auto;
+    }
+
+    .thank-you-message {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+    }
+
+    .thank-you-message.show {
+      opacity: 1;
+      animation: fadeIn 0.3s forwards;
+    }
+
+    .thank-you-message h3 {
+      color: #ff4757;
+      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+    }
+
+    .thank-you-message p {
+      color: #333;
+      margin: 0;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+      .card {
+        width: 100%;
+        max-width: 350px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Vote for Your Favourite Dog!</h1>
+  <div id="container" class="loading">Loading adorable dogs...</div>
+
+  <script>
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/1lgqJYchO0HGPwOxnKZbjkZfwxOran0JHC1gM93itvZI/gviz/tq?tqx=out:json';
+    const voteURL = 'https://script.google.com/macros/s/AKfycbzCJCx5X8NbpwFCQMqyhiaMK2eLSiFa1Dn1rpfH73NcDubbX4NCgv6-IduBzmP4iQ8B/exec';
+
+    document.addEventListener('DOMContentLoaded', loadDogs);
+
+    async function loadDogs() {
+      const container = document.getElementById('container');
+
+      try {
+        const response = await fetch(sheetURL);
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const text = await response.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const rows = json.table.rows.slice(1);
+
+        if (rows.length === 0) {
+          container.innerHTML = '<div class="error">No dogs available for voting at the moment.</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+        container.classList.remove('loading');
+
+        rows.forEach(row => {
+          const name = row.c[0]?.v;
+          const img = row.c[1]?.v || 'https://via.placeholder.com/300?text=No+Image';
+          const votes = row.c[2]?.v || 0;
+          const open = row.c[3]?.v;
+
+          if (!name || !img || open !== 'TRUE') return;
+
+          const id = `dog-${name.replace(/\s+/g, '')}`;
+          const voted = localStorage.getItem(id);
+
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <div class="image-wrapper">
+              <img src="${img}" alt="${name}" class="dog-img" loading="lazy" />
+            </div>
+            <div class="dog-name">${name}</div>
+            <div class="vote-count">${votes} ${votes === 1 ? 'vote' : 'votes'}</div>
+            <button class="vote-btn ${voted ? 'voted' : ''}" data-name="${name}" data-votes="${votes}">
+              <span class="heart ${voted ? 'voted' : ''}"><i class="fa-solid fa-heart"></i></span>
+              <span class="votes">${voted ? 'Voted!' : 'Vote'}</span>
+            </button>
+            <div class="thank-you-message ${voted ? 'show' : ''}">
+              <h3>Thank You!</h3>
+              <p>Your vote for ${name} has been counted</p>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        attachListeners();
+      } catch (err) {
+        console.error('Error loading dogs:', err);
+        container.innerHTML = '<div class="error">Failed to load dogs. Please try again later.</div>';
+      }
+    }
+
+    function attachListeners() {
+      document.querySelectorAll('.vote-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.name;
+          const id = `dog-${name.replace(/\s+/g, '')}`;
+          const card = btn.closest('.card');
+
+          if (localStorage.getItem(id)) {
+            alert("You've already voted for this dog!");
+            return;
+          }
+
+          const heart = document.createElement('span');
+          heart.className = 'heart voted';
+          heart.innerHTML = '<i class="fa-solid fa-heart"></i>';
+
+          const voteText = document.createElement('span');
+          voteText.className = 'votes';
+          voteText.textContent = 'Voted!';
+
+          btn.innerHTML = '';
+          btn.appendChild(heart);
+          btn.appendChild(voteText);
+          btn.classList.add('voted');
+          btn.disabled = true;
+
+          const voteCountElement = card.querySelector('.vote-count');
+          const newVotes = parseInt(btn.dataset.votes) + 1;
+          voteCountElement.textContent = `${newVotes} ${newVotes === 1 ? 'vote' : 'votes'}`;
+
+          const thankYouMessage = card.querySelector('.thank-you-message');
+          thankYouMessage.classList.add('show');
+
+          setTimeout(() => {
+            thankYouMessage.classList.remove('show');
+          }, 3000);
+
+          localStorage.setItem(id, 'true');
+
+          try {
+            const res = await fetch(voteURL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `name=${encodeURIComponent(name)}`
+            });
+            if (!res.ok) console.error('Vote submitted but with issue.');
+          } catch (err) {
+            console.error('Error submitting vote:', err);
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
