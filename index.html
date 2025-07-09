@@ -142,7 +142,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: centre;
       border-radius: 16px;
       opacity: 0;
       pointer-events: none;
@@ -190,7 +190,7 @@
   <div id="container" class="loading">Loading adorable dogs...</div>
 
   <script>
-    const sheetURL = 'https://docs.google.com/spreadsheets/d/1lgqJYchO0HGPwOxnKZbjkZfwxOran0JHC1gM93itvZI/gviz/tq?tqx=out:json';
+    const sheetURL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://docs.google.com/spreadsheets/d/1lgqJYchO0HGPwOxnKZbjkZfwxOran0JHC1gM93itvZI/gviz/tq?tqx=out:json');
     const voteURL = 'https://script.google.com/macros/s/AKfycbzCJCx5X8NbpwFCQMqyhiaMK2eLSiFa1Dn1rpfH73NcDubbX4NCgv6-IduBzmP4iQ8B/exec';
 
     document.addEventListener('DOMContentLoaded', loadDogs);
@@ -216,11 +216,11 @@
 
         rows.forEach(row => {
           const name = row.c[0]?.v;
-          const img = row.c[1]?.v || 'https://via.placeholder.com/300?text=No+Image';
+          const img = row.c[1]?.v;
           const votes = row.c[2]?.v || 0;
           const open = row.c[3]?.v;
 
-          if (!name || !img || open !== 'TRUE') return;
+          if (!name || !img || open !== true) return;
 
           const id = `dog-${name.replace(/\s+/g, '')}`;
           const voted = localStorage.getItem(id);
